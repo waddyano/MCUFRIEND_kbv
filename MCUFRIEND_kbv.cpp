@@ -162,7 +162,6 @@ static uint16_t read16bits(void)
 uint16_t MCUFRIEND_kbv::readReg(uint16_t reg, int8_t index)
 {
     uint16_t ret;
-    uint8_t lo;
     if (!done_reset)
         reset();
     CS_ACTIVE;
@@ -194,7 +193,7 @@ uint32_t MCUFRIEND_kbv::readReg40(uint16_t reg)
 
 uint16_t MCUFRIEND_kbv::readID(void)
 {
-    uint16_t ret, ret2;
+    uint16_t ret;
     uint8_t msb;
     ret = readReg(0);           //forces a reset() if called before begin()
     if (ret == 0x5408)          //the SPFD5408 fails the 0xD3D3 test.
@@ -263,9 +262,9 @@ uint16_t MCUFRIEND_kbv::readID(void)
 //        return 0x1526;          //subsequent begin() enables Command Access
     if (ret == 0x1526)          //R61526 [xx 06 15 26] if I have written NVM
         return 0x1526;          //subsequent begin() enables Command Access
-	if (ret == 0x89F0)          //ST7735S: [xx 7C 89 F0]
+    if (ret == 0x89F0)          //ST7735S: [xx 7C 89 F0]
         return 0x7735;
-	if (ret == 0x8552)          //ST7789V: [xx 85 85 52]
+    if (ret == 0x8552)          //ST7789V: [xx 85 85 52]
         return 0x7789;
     if (ret == 0xAC11)          //?unknown [xx 61 AC 11]
         return 0xAC11;
@@ -297,7 +296,7 @@ int16_t MCUFRIEND_kbv::readGRAM(int16_t x, int16_t y, uint16_t * block, int16_t 
 {
     uint16_t ret, dummy, _MR = _MW;
     int16_t n = w * h, row = 0, col = 0;
-    uint8_t r, g, b, tmp;
+    uint8_t r, g, b;
     if (!is8347 && _lcd_capable & MIPI_DCS_REV1) // HX8347 uses same register
         _MR = 0x2E;
     if (_lcd_ID == 0x1602) _MR = 0x2E;
@@ -358,7 +357,10 @@ int16_t MCUFRIEND_kbv::readGRAM(int16_t x, int16_t y, uint16_t * block, int16_t 
 
 void MCUFRIEND_kbv::setRotation(uint8_t r)
 {
-    uint16_t GS, SS_v, ORG, REV = _lcd_rev, NL;
+    uint16_t GS, SS_v, ORG, NL;
+#ifdef SUPPORT_1289
+    uint16_t REV = _lcd_rev;
+#endif
     uint8_t val, d[3];
     rotation = r & 3;           // just perform the operation ourselves on the protected variables
     _width = (rotation & 1) ? HEIGHT : WIDTH;
@@ -673,7 +675,7 @@ void MCUFRIEND_kbv::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_
         setAddrWindow(0, 0, width() - 1, height() - 1);
 }
 
-static void pushColors_any(uint16_t cmd, uint8_t * block, int16_t n, bool first, uint8_t flags)
+static void pushColors_any(uint16_t cmd, uint8_t * block, int32_t n, bool first, uint8_t flags)
 {
     uint16_t color;
     uint8_t h, l;
@@ -710,15 +712,15 @@ static void pushColors_any(uint16_t cmd, uint8_t * block, int16_t n, bool first,
     CS_IDLE;
 }
 
-void MCUFRIEND_kbv::pushColors(uint16_t * block, int16_t n, bool first)
+void MCUFRIEND_kbv::pushColors(uint16_t * block, int32_t n, bool first)
 {
     pushColors_any(_MW, (uint8_t *)block, n, first, 0);
 }
-void MCUFRIEND_kbv::pushColors(uint8_t * block, int16_t n, bool first)
+void MCUFRIEND_kbv::pushColors(uint8_t * block, int32_t n, bool first)
 {
     pushColors_any(_MW, (uint8_t *)block, n, first, 2);   //regular bigend
 }
-void MCUFRIEND_kbv::pushColors(const uint8_t * block, int16_t n, bool first, bool bigend)
+void MCUFRIEND_kbv::pushColors(const uint8_t * block, int32_t n, bool first, bool bigend)
 {
     pushColors_any(_MW, (uint8_t *)block, n, first, bigend ? 3 : 1);
 }
@@ -1292,6 +1294,7 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
         _lcd_capable |= READ_24BITS;
 #endif
         // from NHD 5.0" 8-bit
+#if 0
         static const uint8_t SSD1963_NHD_50_regValues[] PROGMEM = {
             (0xE0), 1, 0x01,    // PLL enable
             TFTLCD_DELAY8, 10,
@@ -1306,7 +1309,9 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
             (0x13), 0,          //Enter Normal mode
             (0x38), 0,          //Exit Idle mode
         };
+#endif
         // from NHD 7.0" 8-bit
+#if 0
         static const uint8_t SSD1963_NHD_70_regValues[] PROGMEM = {
             (0xE2), 3, 0x1D, 0x02, 0x04,        //PLL multiplier, set PLL clock to 120M
             (0xE0), 1, 0x01,    // PLL enable
@@ -1323,6 +1328,7 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
             (0x13), 0,          //Enter Normal mode
             (0x38), 0,          //Exit Idle mode
         };
+    #endif
         // from UTFTv2.81 initlcd.h
         static const uint8_t SSD1963_800_regValues[] PROGMEM = {
             (0xE2), 3, 0x1E, 0x02, 0x54,        //PLL multiplier, set PLL clock to 120M
@@ -1349,6 +1355,7 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
             (0xD0), 1, 0x0D,
         };
         // from UTFTv2.82 initlcd.h
+#if 0
         static const uint8_t SSD1963_800NEW_regValues[] PROGMEM = {
             (0xE2), 3, 0x1E, 0x02, 0x54,        //PLL multiplier, set PLL clock to 120M
             (0xE0), 1, 0x01,    // PLL enable
@@ -1372,7 +1379,9 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
             (0xBE), 6, 0x06, 0xF0, 0x01, 0xF0, 0x00, 0x00,      //set PWM for B/L
             (0xD0), 1, 0x0D,
         };
+#endif
         // from UTFTv2.82 initlcd.h
+#if 0
         static const uint8_t SSD1963_800ALT_regValues[] PROGMEM = {
             (0xE2), 3, 0x23, 0x02, 0x04,        //PLL multiplier, set PLL clock to 120M
             (0xE0), 1, 0x01,    // PLL enable
@@ -1396,7 +1405,9 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
             (0xBE), 6, 0x06, 0xF0, 0x01, 0xF0, 0x00, 0x00,      //set PWM for B/L
             (0xD0), 1, 0x0D,
         };
+#endif
         // from UTFTv2.82 initlcd.h
+#if 0
         static const uint8_t SSD1963_480_regValues[] PROGMEM = {
             (0xE2), 3, 0x23, 0x02, 0x54,        //PLL multiplier, set PLL clock to 120M
             (0xE0), 1, 0x01,    // PLL enable
@@ -1420,6 +1431,7 @@ void MCUFRIEND_kbv::begin(uint16_t ID)
             (0xBE), 6, 0x06, 0xF0, 0x01, 0xF0, 0x00, 0x00,      //set PWM for B/L
             (0xD0), 1, 0x0D,
         };
+#endif
 //        table8_ads = SSD1963_480_regValues, table_size = sizeof(SSD1963_480_regValues);
         table8_ads = SSD1963_800_regValues, table_size = sizeof(SSD1963_800_regValues);
 //        table8_ads = SSD1963_NHD_50_regValues, table_size = sizeof(SSD1963_NHD_50_regValues);
@@ -1635,6 +1647,7 @@ case 0x4532:    // thanks Leodino
 #ifdef SUPPORT_7781
     case 0x7783:
         _lcd_capable = AUTO_READINC | REV_SCREEN | INVERT_GS;
+#if 0
         static const uint16_t ST7781_regValues[] PROGMEM = {
             0x00FF, 0x0001,     //can we do 0xFF
             0x00F3, 0x0008,
@@ -1677,6 +1690,7 @@ case 0x4532:    // thanks Leodino
             0x0007, 0x0133,     // Display Control (R07h)
             TFTLCD_DELAY, 50,
         };
+#endif
         static const uint16_t ST7781_regValues_CPT24[] PROGMEM = {
             0x0001, 0x0100,     // Driver Output Control Register (R01h)
             0x0002, 0x0700,     // LCD Driving Waveform Control (R02h)
@@ -1735,6 +1749,7 @@ case 0x4532:    // thanks Leodino
             (0xE0), 14, 0xD0, 0x00, 0x05, 0x0E, 0x15, 0x0D, 0x37, 0x43, 0x47, 0x09, 0x15, 0x12, 0x16, 0x19,     //PVGAMCTRL: Positive Voltage Gamma control        
             (0xE1), 14, 0xD0, 0x00, 0x05, 0x0D, 0x0C, 0x06, 0x2D, 0x44, 0x40, 0x0E, 0x1C, 0x18, 0x16, 0x19,     //NVGAMCTRL: Negative Voltage Gamma control
         };
+#if 0        
         static const uint8_t ST7789_regValues_arcain6[] PROGMEM = {
             (0xB2), 5, 0x0C, 0x0C, 0x00, 0x33, 0x33,    //PORCTRK: Porch setting [08 08 00 22 22] PSEN=0 anyway
             (0xB7), 1, 0x35,    //GCTRL: Gate Control [35]
@@ -1751,6 +1766,7 @@ case 0x4532:    // thanks Leodino
             (0xE0), 14, 0xD0, 0x00, 0x06, 0x09, 0x0B, 0x2A, 0x3C, 0x55, 0x4B, 0x08, 0x16, 0x14, 0x19, 0x20,     //PVGAMCTRL: Positive Voltage Gamma control        
             (0xE1), 14, 0xD0, 0x00, 0x06, 0x09, 0x0B, 0x29, 0x36, 0x54, 0x4B, 0x0D, 0x16, 0x14, 0x21, 0x20,     //NVGAMCTRL: Negative Voltage Gamma control
         };
+#endif        
         table8_ads = ST7789_regValues, table_size = sizeof(ST7789_regValues); //
         break;
 
@@ -1925,7 +1941,7 @@ case 0x4532:    // thanks Leodino
 #ifdef SUPPORT_8347A
     case 0x8347:
         _lcd_capable = REV_SCREEN | MIPI_DCS_REV1 | MV_AXIS;
-        // AN.01 The reference setting of CMO 3.2‚Äù Panel
+        // AN.01 The reference setting of CMO 3.2‚?ù Panel
         static const uint8_t HX8347A_CMO32_regValues[] PROGMEM = {
             //  VENDOR Gamma for 3.2"
             (0x46), 12, 0xA4, 0x53, 0x00, 0x44, 0x04, 0x67, 0x33, 0x77, 0x12, 0x4C, 0x46, 0x44,
@@ -1973,7 +1989,7 @@ case 0x4532:    // thanks Leodino
             (0xFE), 1, 0x5A,    // For ESD protection
             (0x57), 1, 0x00,    // TEST_Mode=0: exit TEST mode
         };
-        // AN.01 The reference setting of CMO 2.4‚Äù Panel
+        // AN.01 The reference setting of CMO 2.4‚?ù Panel
         static const uint8_t HX8347A_CMO24_regValues[] PROGMEM = {
             //  VENDOR Gamma for 2.4"
             (0x46), 12, 0x94, 0x41, 0x00, 0x33, 0x23, 0x45, 0x44, 0x77, 0x12, 0xCC, 0x46, 0x82,
@@ -2505,9 +2521,9 @@ case 0x4532:    // thanks Leodino
         _lcd_capable = REV_SCREEN | READ_BGR;
         static const uint16_t ILI9326_CPT28_regValues[] PROGMEM = {
 //************* Start Initial Sequence **********//
-         0x0702, 0x3008,     //  Set internal timing, don‚Äôt change this value
-         0x0705, 0x0036,     //  Set internal timing, don‚Äôt change this value
-         0x070B, 0x1213,     //  Set internal timing, don‚Äôt change this value
+         0x0702, 0x3008,     //  Set internal timing, don‚??t change this value
+         0x0705, 0x0036,     //  Set internal timing, don‚??t change this value
+         0x070B, 0x1213,     //  Set internal timing, don‚??t change this value
          0x0001, 0x0100,     //  set SS and SM bit
          0x0002, 0x0100,     //  set 1 line inversion
          0x0003, 0x1030,     //  set GRAM write direction and BGR=1.
@@ -2654,6 +2670,7 @@ case 0x4532:    // thanks Leodino
             0xE0, 15, 0x0f, 0x26, 0x24, 0x0b, 0x0e, 0x09, 0x54, 0xa8, 0x46, 0x0c, 0x17, 0x09, 0x0f, 0x07, 0x00,
             0xE1, 15, 0x00, 0x19, 0x1b, 0x04, 0x10, 0x07, 0x2a, 0x47, 0x39, 0x03, 0x06, 0x06, 0x30, 0x38, 0x0f,
         };
+#if 0        
         static const uint8_t ILI9341_regValues_ada[] PROGMEM = {        // Adafruit_TFTLCD only works with EXTC=0
             //                     0xF6, 3, 0x00, 0x01, 0x00,  //Interface Control needs EXTC=1 TM=0, RIM=0
             //            0xF6, 3, 0x01, 0x01, 0x03,  //Interface Control needs EXTC=1 RM=1, RIM=1
@@ -2668,6 +2685,7 @@ case 0x4532:    // thanks Leodino
             0xB1, 2, 0x00, 0x1B,        //Frame Control [00 1B]
             0xB7, 1, 0x07,      //Entry Mode [00]
         };
+#endif
         table8_ads = ILI9341_regValues_2_4, table_size = sizeof(ILI9341_regValues_2_4);   //
         break;
 #if defined(SUPPORT_9342)
@@ -2734,6 +2752,7 @@ case 0x4532:    // thanks Leodino
             0xC8, 12, 0x00, 0x32, 0x36, 0x45, 0x06, 0x16, 0x37, 0x75, 0x77, 0x54, 0x0C, 0x00,
 			0xCC, 1, 0x00,      //Panel Control [00]
         };
+#if 0
         static const uint8_t ILI9481_CPT29_regValues[] PROGMEM = {    // 320x430
             0xB0, 1, 0x00,
             0xD0, 3, 0x07, 0x42, 0x1C,  // Set Power [00 43 18]
@@ -2746,6 +2765,8 @@ case 0x4532:    // thanks Leodino
             0xF0, 1, 0x01,
             0xF3, 2, 0x02, 0x1A,			
         };
+#endif
+#if 0        
         static const uint8_t ILI9481_PVI35_regValues[] PROGMEM = {    // 320x480
             0xB0, 1, 0x00,
             0xD0, 3, 0x07, 0x41, 0x1D,  // Set Power [00 43 18]
@@ -2758,6 +2779,8 @@ case 0x4532:    // thanks Leodino
             0xF0, 1, 0x01,
             0xF3, 2, 0x40, 0x0A,			
         };
+#endif
+#if 0        
         static const uint8_t ILI9481_AUO317_regValues[] PROGMEM = {    // 320x480
             0xB0, 1, 0x00,
             0xD0, 3, 0x07, 0x40, 0x1D,  // Set Power [00 43 18]
@@ -2769,6 +2792,8 @@ case 0x4532:    // thanks Leodino
             0xE4, 1, 0xA0,
             0xF0, 1, 0x01,			
         };
+#endif
+#if 0        
         static const uint8_t ILI9481_CMO35_regValues[] PROGMEM = {    // 320480
             0xB0, 1, 0x00,
             0xD0, 3, 0x07, 0x41, 0x1D,  // Set Power [00 43 18] 07,41,1D
@@ -2783,6 +2808,8 @@ case 0x4532:    // thanks Leodino
             0x36, 1, 0x48,      //Memory Access [00]
             0xB4, 1, 0x11,			
         };
+#endif
+#if 0        
         static const uint8_t ILI9481_RGB_regValues[] PROGMEM = {    // 320x480
             0xB0, 1, 0x00,
             0xD0, 3, 0x07, 0x41, 0x1D,  // SETPOWER [00 43 18]
@@ -2801,6 +2828,7 @@ case 0x4532:    // thanks Leodino
 //			0xB3, 4, 0x00, 0x01, 0x06, 0x01,  //SETGRAM simple example
 			0xB3, 4, 0x00, 0x01, 0x06, 0x30,  //jpegs example
         };
+#endif        
         table8_ads = ILI9481_regValues, table_size = sizeof(ILI9481_regValues);
 //        table8_ads = ILI9481_CPT29_regValues, table_size = sizeof(ILI9481_CPT29_regValues);
 //        table8_ads = ILI9481_PVI35_regValues, table_size = sizeof(ILI9481_PVI35_regValues);
@@ -2875,7 +2903,7 @@ case 0x4532:    // thanks Leodino
     case 0x9487:                //with thanks to Charlyf
     case 0x9488:
         _lcd_capable = AUTO_READINC | MIPI_DCS_REV1 | MV_AXIS | READ_24BITS;
-      common_9488:
+      //common_9488:
         static const uint8_t ILI9488_regValues_max[] PROGMEM = {        // Atmel MaxTouch
             0xC0, 2, 0x10, 0x10,        //Power Control 1 [0E 0E]
             0xC1, 1, 0x41,      //Power Control 2 [43]

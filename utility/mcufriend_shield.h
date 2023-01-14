@@ -259,7 +259,7 @@ void write_8(uint8_t val)
  // configure macros for data bus
 #define DMASK 0x0030C3C0
  //  #define write_8(x) PORT->Group[0].OUT.reg = (PORT->Group[0].OUT.reg & ~DMASK)|(((x) & 0x0F) << 6)|(((x) & 0x30) << 10)|(((x) & 0xC0)<<14)
-#if defined(ARDUINO_SAMD_ZERO) && !defined(USE_M0_PINOUT)   // American ZERO
+#if defined(ARDUINO_SAMD_ZERO) || defined(ARDUINO_SAMD_ZERO)   // American ZERO
 //LCD pins   |D7  |D6  |D5  |D4  |D3  |D2  |D1  |D0  | |RD |WR |RS  |CS  |RST |
 //SAMD21 pin |PA21|PA20|PA15|PA8 |PA9 |PA14|PA7 |PA6 | |PA2|PB8|PB9 |PA4 |PA5 |
 #define write_8(x) {\
@@ -1023,20 +1023,20 @@ void write_8(uint8_t x)
 
 //################################### ESP32 ##############################
 #elif defined(ESP32)       //regular UNO shield on TTGO D1 R32 (ESP32)
-#define LCD_RD  2  //LED
-#define LCD_WR  4
-#define LCD_RS 15  //hard-wired to A2 (GPIO35) 
-#define LCD_CS 33  //hard-wired to A3 (GPIO34)
-#define LCD_RST 32 //hard-wired to A4 (GPIO36)
+#define LCD_RD 13  //LED
+#define LCD_WR 12
+#define LCD_RS 33  //hard-wired to A2 (GPIO35) 
+#define LCD_CS 32  //hard-wired to A3 (GPIO34)
+#define LCD_RST 26 //hard-wired to A4 (GPIO36)
 
-#define LCD_D0 12
-#define LCD_D1 13
-#define LCD_D2 26
-#define LCD_D3 25
-#define LCD_D4 17
-#define LCD_D5 16
-#define LCD_D6 27
-#define LCD_D7 14
+#define LCD_D0 16
+#define LCD_D1 4
+#define LCD_D2 27
+#define LCD_D3 22
+#define LCD_D4 21
+#define LCD_D5 15
+#define LCD_D6 14
+#define LCD_D7 17
 
 #define RD_PORT GPIO.out
 #define RD_PIN  LCD_RD
@@ -1220,7 +1220,8 @@ static void setReadDir()
 #define RESET_OUTPUT  PIN_OUTPUT(RESET_PORT, RESET_PIN)
 
  // General macros.   IOCLR registers are 1 cycle when optimised.
-#define WR_STROBE { WR_ACTIVE; WR_IDLE; }       //PWLW=TWRL=50ns
+#define WR_STROBE {  GPIO.out_w1ts = ((uint32_t)1 << WR_PIN); GPIO.out_w1tc = ((uint32_t)1 << WR_PIN); } 
+//#define WR_STROBE { WR_ACTIVE; WR_IDLE; }       //PWLW=TWRL=50ns
 #define RD_STROBE RD_IDLE, RD_ACTIVE, RD_ACTIVE, RD_ACTIVE      //PWLR=TRDL=150ns, tDDR=100ns
 
 #if !defined(GPIO_INIT)

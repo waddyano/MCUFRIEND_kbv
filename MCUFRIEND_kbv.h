@@ -5,7 +5,7 @@
  */
 
 #ifndef MCUFRIEND_KBV_H_
-#define MCUFRIEND_KBV_H_   310
+#define MCUFRIEND_KBV_H_   300
 
 //#define USE_SERIAL
 
@@ -39,9 +39,9 @@ class MCUFRIEND_kbv : public Adafruit_GFX {
 	int16_t  readGRAM(int16_t x, int16_t y, uint16_t *block, int16_t w, int16_t h);
 	uint16_t readPixel(int16_t x, int16_t y) { uint16_t color; readGRAM(x, y, &color, 1, 1); return color; }
 	void     setAddrWindow(int16_t x, int16_t y, int16_t x1, int16_t y1);
-	void     pushColors(uint16_t *block, int16_t n, bool first);
-	void     pushColors(uint8_t *block, int16_t n, bool first);
-	void     pushColors(const uint8_t *block, int16_t n, bool first, bool bigend = false);
+	void     pushColors(uint16_t *block, int32_t n, bool first);
+	void     pushColors(uint8_t *block, int32_t n, bool first);
+	void     pushColors(const uint8_t *block, int32_t n, bool first, bool bigend = false);
     void     vertScroll(int16_t top, int16_t scrollines, int16_t offset);
 
     protected:
