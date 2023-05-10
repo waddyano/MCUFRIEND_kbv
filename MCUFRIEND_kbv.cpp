@@ -37,6 +37,7 @@
 #else
 #include "utility/mcufriend_shield.h"
 #endif
+#include "Commands.h"
 
 #define MIPI_DCS_REV1   (1<<0)
 #define AUTO_READINC    (1<<1)
@@ -92,6 +93,21 @@ static void write24(uint16_t color) {
 void MCUFRIEND_kbv::reset(void)
 {
     done_reset = 1;
+
+    gpio_reset_pin((gpio_num_t)LCD_D0);
+    gpio_reset_pin((gpio_num_t)LCD_D1);
+    gpio_reset_pin((gpio_num_t)LCD_D2);
+    gpio_reset_pin((gpio_num_t)LCD_D3);
+    gpio_reset_pin((gpio_num_t)LCD_D4);
+    gpio_reset_pin((gpio_num_t)LCD_D5);
+    gpio_reset_pin((gpio_num_t)LCD_D6);
+    gpio_reset_pin((gpio_num_t)LCD_D7);
+    gpio_reset_pin((gpio_num_t)LCD_RD);
+    gpio_reset_pin((gpio_num_t)LCD_WR);
+    gpio_reset_pin((gpio_num_t)LCD_CS);
+    gpio_reset_pin((gpio_num_t)LCD_RS);
+    gpio_reset_pin((gpio_num_t)LCD_RST);
+
     setWriteDir();
     CTL_INIT();
     CS_IDLE;
@@ -361,13 +377,14 @@ void MCUFRIEND_kbv::setRotation(uint8_t r)
 #ifdef SUPPORT_1289
     uint16_t REV = _lcd_rev;
 #endif
+    ::printf("setRotation %u\n", r);
     uint8_t val, d[3];
     rotation = r & 3;           // just perform the operation ourselves on the protected variables
     _width = (rotation & 1) ? HEIGHT : WIDTH;
     _height = (rotation & 1) ? WIDTH : HEIGHT;
     switch (rotation) {
     case 0:                    //PORTRAIT:
-        val = 0x48;             //MY=0, MX=1, MV=0, ML=0, BGR=1
+        val = 0x48;            //MY=0, MX=1, MV=0, ML=0, BGR=1
         break;
     case 1:                    //LANDSCAPE: 90 degrees
         val = 0x28;             //MY=0, MX=0, MV=1, ML=0, BGR=1
@@ -433,6 +450,7 @@ void MCUFRIEND_kbv::setRotation(uint8_t r)
       common_MC:
         _MC = 0x2A, _MP = 0x2B, _MW = 0x2C, _SC = 0x2A, _EC = 0x2A, _SP = 0x2B, _EP = 0x2B;
       common_BGR:
+    ::printf("val %x\n", val);
         WriteCmdParamN(is8347 ? 0x16 : 0x36, 1, &val);
         _lcd_madctl = val;
 //	    if (_lcd_ID	== 0x1963) WriteCmdParamN(0x13, 0, NULL);   //NORMAL mode
@@ -528,6 +546,14 @@ void MCUFRIEND_kbv::setRotation(uint8_t r)
     }
     setAddrWindow(0, 0, width() - 1, height() - 1);
     vertScroll(0, HEIGHT, 0);   //reset scrolling after a rotation
+}
+
+void MCUFRIEND_kbv::flipMirrorY() 
+{
+    uint8_t val = _lcd_madctl;
+    val ^= 0x80;
+    WriteCmdParamN(LCD_MAC, 1, &val);
+    _lcd_madctl = val;
 }
 
 void MCUFRIEND_kbv::drawPixel(int16_t x, int16_t y, uint16_t color)
@@ -1941,7 +1967,7 @@ case 0x4532:    // thanks Leodino
 #ifdef SUPPORT_8347A
     case 0x8347:
         _lcd_capable = REV_SCREEN | MIPI_DCS_REV1 | MV_AXIS;
-        // AN.01 The reference setting of CMO 3.2â? Panel
+        // AN.01 The reference setting of CMO 3.2ï¿½?ï¿½ Panel
         static const uint8_t HX8347A_CMO32_regValues[] PROGMEM = {
             //  VENDOR Gamma for 3.2"
             (0x46), 12, 0xA4, 0x53, 0x00, 0x44, 0x04, 0x67, 0x33, 0x77, 0x12, 0x4C, 0x46, 0x44,
@@ -1989,7 +2015,7 @@ case 0x4532:    // thanks Leodino
             (0xFE), 1, 0x5A,    // For ESD protection
             (0x57), 1, 0x00,    // TEST_Mode=0: exit TEST mode
         };
-        // AN.01 The reference setting of CMO 2.4â? Panel
+        // AN.01 The reference setting of CMO 2.4ï¿½?ï¿½ Panel
         static const uint8_t HX8347A_CMO24_regValues[] PROGMEM = {
             //  VENDOR Gamma for 2.4"
             (0x46), 12, 0x94, 0x41, 0x00, 0x33, 0x23, 0x45, 0x44, 0x77, 0x12, 0xCC, 0x46, 0x82,
@@ -2521,9 +2547,9 @@ case 0x4532:    // thanks Leodino
         _lcd_capable = REV_SCREEN | READ_BGR;
         static const uint16_t ILI9326_CPT28_regValues[] PROGMEM = {
 //************* Start Initial Sequence **********//
-         0x0702, 0x3008,     //  Set internal timing, donâ??t change this value
-         0x0705, 0x0036,     //  Set internal timing, donâ??t change this value
-         0x070B, 0x1213,     //  Set internal timing, donâ??t change this value
+         0x0702, 0x3008,     //  Set internal timing, donï¿½??t change this value
+         0x0705, 0x0036,     //  Set internal timing, donï¿½??t change this value
+         0x070B, 0x1213,     //  Set internal timing, donï¿½??t change this value
          0x0001, 0x0100,     //  set SS and SM bit
          0x0002, 0x0100,     //  set 1 line inversion
          0x0003, 0x1030,     //  set GRAM write direction and BGR=1.
@@ -2664,7 +2690,7 @@ case 0x4532:    // thanks Leodino
             0xC1, 1, 0x11,      //Power Control 2 [00]
             0xC5, 2, 0x3F, 0x3C,        //VCOM 1 [31 3C]
             0xC7, 1, 0xB5,      //VCOM 2 [C0]
-            0x36, 1, 0x48,      //Memory Access [00]
+            LCD_MAC, 1, 0x48,      //Memory Access [00]
             0xF2, 1, 0x00,      //Enable 3G [02]
             0x26, 1, 0x01,      //Gamma Set [01]
             0xE0, 15, 0x0f, 0x26, 0x24, 0x0b, 0x0e, 0x09, 0x54, 0xa8, 0x46, 0x0c, 0x17, 0x09, 0x0f, 0x07, 0x00,

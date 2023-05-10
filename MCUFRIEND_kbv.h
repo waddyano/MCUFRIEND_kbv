@@ -9,16 +9,16 @@
 
 //#define USE_SERIAL
 
-#if ARDUINO < 101
-#define USE_GFX_KBV
-#include "ADA_GFX_kbv.h"
-#else
+//#if ARDUINO < 101
+//#define USE_GFX_KBV
+//#include "ADA_GFX_kbv.h"
+//#else
 #include "Adafruit_GFX.h"
-#endif
+//#endif
 
 class MCUFRIEND_kbv : public Adafruit_GFX {
 
-	public:
+public:
 //	MCUFRIEND_kbv(int CS=A3, int RS=A2, int WR=A1, int RD=A0, int RST=A4); //shield wiring
 	MCUFRIEND_kbv(int CS=0, int RS=0, int WR=0, int RD=0, int _RST=0);  //dummy arguments 
 	void     reset(void);                                       // you only need the constructor
@@ -35,6 +35,8 @@ class MCUFRIEND_kbv : public Adafruit_GFX {
 	virtual void     setRotation(uint8_t r);
     virtual void     invertDisplay(bool i);
 
+	void flipMirrorY();
+
 	uint16_t readReg(uint16_t reg, int8_t index=0);
 	int16_t  readGRAM(int16_t x, int16_t y, uint16_t *block, int16_t w, int16_t h);
 	uint16_t readPixel(int16_t x, int16_t y) { uint16_t color; readGRAM(x, y, &color, 1, 1); return color; }
@@ -44,12 +46,12 @@ class MCUFRIEND_kbv : public Adafruit_GFX {
 	void     pushColors(const uint8_t *block, int32_t n, bool first, bool bigend = false);
     void     vertScroll(int16_t top, int16_t scrollines, int16_t offset);
 
-    protected:
+protected:
 	uint32_t readReg32(uint16_t reg);
 	uint32_t readReg40(uint16_t reg);
     uint16_t  _lcd_xor, _lcd_capable;
 
-	private:
+private:
 	uint16_t _lcd_ID, _lcd_rev, _lcd_madctl, _lcd_drivOut, _MC, _MP, _MW, _SC, _EC, _SP, _EP;
 };
 
